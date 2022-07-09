@@ -1,10 +1,15 @@
 ---
-title:
-  <center> Dirección de Mantenimiento
+title: "<center> Dirección de Mantenimiento"
 output:
   html_document:
     fig_width: 10
     number_sections: no
+    toc: no
+    toc_float: no
+params:
+  placa: "KYO810"
+  desde: "2022-04-01"
+  hasta: "2022-07-08"
 pagetitle: Hoja de Vida del Activo
 ---
 
@@ -35,7 +40,7 @@ h1 {
 ```
 <h6>
 
-**Fecha**: 01 de Junio de 2022. **Creado Por**: Jorge Saavedra
+**Fecha**: `r format(lubridate::today(), "%d de %B de %Y")` **Creado Por**: Área de Programación
 
 </h6>
 
@@ -47,10 +52,12 @@ library(kableExtra)
 library(grid)
 library(tidyverse)
 library(lubridate)
+library(glue)
+library(DT)
 options(scipen = 999)
 ```
 
-```{r CargueDatos, eval=FALSE, include=FALSE}
+```{r CargueDatos, include=FALSE}
 con <- DBI::dbConnect(RPostgres::Postgres(),
                       host = '10.0.22.11',
                       port = '5432',
@@ -59,27 +66,58 @@ con <- DBI::dbConnect(RPostgres::Postgres(),
                       password = keyring::key_get("DWGM", keyring::key_list("DWGM")[1,2]))
 
 # Se obtiene las fechas actuales de los datos procesados
-data <- odbc::dbGetQuery(con, 'SELECT "ActStart", "SiteId", "AssetNum", "Parent", "WoNum", 
-                                "DescriptionOt", "Status", "WoClass", "WorkType",  "LectOdom"
+dim_flota <- odbc::dbGetQuery(con, glue_sql('SELECT "AssetNum", "Description", "TIPO"
+                                              FROM "public"."DimFlota"
+                                              WHERE "AssetNum" = {vehiculo}', 
+                                            vehiculo = params$placa,
+                                            .con = con))
+
+ordenes_sql <- glue_sql('SELECT DATE("ActStart") AS "Fecha", "SiteId" as "Empresa", 
+                                "AssetNum" as "Vehiculo", "Parent" as "OT", 
+                                "WoNum" as "Actividad", 
+                                "DescriptionOt" as "Detalle", "Status" as "Estado", 
+                                "WoClass" as "Clase", "WorkType" as "Tipo", "LectOdom" as "Kms"
                                 FROM "public"."FactWorkOrder"
                                 WHERE "WoClass" = \'ACTIVIDAD\' 
                                 AND "Status" IN (\'TERMINADO\', \'COMP\') 
-                                AND "AssetNum" = \'KYO420\'
-                                ORDER BY "ActStart" DESC')
+                                AND "AssetNum" = {vehiculo}
+                                AND DATE("ActStart") >= {desde}
+                                AND DATE("ActStart") <= {hasta}
+                                ORDER BY "ActStart" DESC', 
+                    vehiculo = params$placa,
+                    desde = params$desde,
+                    hasta = params$hasta,
+                    .con = con)
+
+ordenes <- odbc::dbGetQuery(con, ordenes_sql) %>% 
+  mutate_at(vars("Estado", "Clase"), .funs = str_to_title)
+  
 
 DBI::dbDisconnect(con)
 ```
 
-# Consumo Energético
+---
+# Historial de Actividades
 
-Con los eventos **20 =\> Inicio del proceso de carga** y **21 =\> Finalización del proceso de carga** se realiza el procesamiento de la información para obtener los porcentajes de carga del vehículo y el tiempo transcurrido en la operación de carga.
+A continuación se presentan las actividades de mantenimiento realizadas en el periodo comprendido entre el **`r params$desde`** hasta el **`r params$hasta`**.
 
-<p style="background-color: #F5F5F5">
+<div class="alert alert-success" role="alert">
+  Los datos corresponden al vehículo **`r params$placa`** con numero interno **`r dim_flota$Description`** y tipologia **`r dim_flota$TIPO`**
+</div>
 
-**Tabla resumen de datos de los eventos de carga**.
+Use las siguientes opciones para descargar la información.
 
-</p>
-
-```{r message=FALSE, warning=FALSE, paged.print=TRUE}
-data
+```{r message=FALSE, warning=FALSE}
+ordenes %>% 
+  select(-c("Actividad", "Estado", "Clase")) %>% 
+  datatable(
+    filter = 'top',
+    rownames = FALSE,
+    extensions = 'Buttons',
+    options = list(pageLength = 15,
+                   dom = 'Btrpi',
+                   buttons = c('excel', 'pdf'),
+                   searchHighlight = TRUE),
+    caption = 'Tabla 1: Tabla Detalle.') %>% 
+  formatRound("Kms", 0)
 ```
