@@ -6,10 +6,12 @@ output:
     number_sections: no
     toc: no
     toc_float: no
+  pdf_document:
+    toc: no
 params:
-  placa: "KYO810"
-  desde: "2022-04-01"
-  hasta: "2022-07-08"
+  placa: KYO810
+  desde: '2022-04-01'
+  hasta: '2022-07-08'
 pagetitle: Hoja de Vida del Activo
 ---
 
@@ -40,7 +42,7 @@ h1 {
 ```
 <h6>
 
-**Fecha**: `r format(lubridate::today(), "%d de %B de %Y")` **Creado Por**: Área de Programación
+**Fecha**: `r format(lubridate::today(), "%d de %B de %Y")` **Creado Por**: Programación de Mantenimiento
 
 </h6>
 
@@ -90,7 +92,8 @@ ordenes_sql <- glue_sql('SELECT DATE("ActStart") AS "Fecha", "SiteId" as "Empres
                     .con = con)
 
 ordenes <- odbc::dbGetQuery(con, ordenes_sql) %>% 
-  mutate_at(vars("Estado", "Clase"), .funs = str_to_title)
+  mutate_at(vars("Estado", "Clase"), .funs = str_to_title) %>% 
+  mutate(Tipo = as.factor(Tipo))
   
 
 DBI::dbDisconnect(con)
@@ -105,19 +108,33 @@ A continuación se presentan las actividades de mantenimiento realizadas en el p
   Los datos corresponden al vehículo **`r params$placa`** con numero interno **`r dim_flota$Description`** y tipologia **`r dim_flota$TIPO`**
 </div>
 
+Los tipos de ordenes son: **MCO:** Correctivo, **MPR:** Preventivo, **ALS:** Alistamiento y **CAM:** Campaña
+ 
 Use las siguientes opciones para descargar la información.
+
+```{css echo=FALSE}
+
+.dataTables_wrapper .dt-buttons {
+  float:none;  
+  text-align:right;
+}
+```
 
 ```{r message=FALSE, warning=FALSE}
 ordenes %>% 
-  select(-c("Actividad", "Estado", "Clase")) %>% 
+  select(-c("Actividad", "Estado", "Clase", "Empresa")) %>% 
   datatable(
-    filter = 'top',
+    filter = list(position = 'top'),
     rownames = FALSE,
     extensions = 'Buttons',
     options = list(pageLength = 15,
-                   dom = 'Btrpi',
-                   buttons = c('excel', 'pdf'),
-                   searchHighlight = TRUE),
+                   dom = 'Bltrpi',
+                   buttons = c('csv'),
+                   searchHighlight = TRUE,
+                   autowidth = TRUE,
+                   columnDefs = list(list(width = '600px', targets = c(3)),
+                                     list(width = '90px', targets = c(4)))),
     caption = 'Tabla 1: Tabla Detalle.') %>% 
+  formatStyle(columns = c(1, 2, 3, 4, 5, 6, 7), fontSize = '12px') %>% 
   formatRound("Kms", 0)
 ```
