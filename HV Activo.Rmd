@@ -1,0 +1,85 @@
+---
+title:
+  <center> Dirección de Mantenimiento
+output:
+  html_document:
+    fig_width: 10
+    number_sections: no
+pagetitle: Hoja de Vida del Activo
+---
+
+<p>
+
+::: pull-right
+![](https://greenmovil.com.co/wp-content/uploads/2022/01/Greenmovil_Pequeno.png){width="80%"}
+:::
+
+<h3>
+
+Hoja de Vida del Activo
+
+</h3>
+
+------------------------------------------------------------------------
+
+```{=html}
+<style>
+body {
+    text-align: justify
+    }
+
+h1 {
+  font-size: 20px;
+  }
+</style>
+```
+<h6>
+
+**Fecha**: 01 de Junio de 2022. **Creado Por**: Jorge Saavedra
+
+</h6>
+
+```{r septup, message=FALSE, warning=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = F, warning = F)
+dig <- function(x) format(x, digits = 2)
+library(knitr)
+library(kableExtra)
+library(grid)
+library(tidyverse)
+library(lubridate)
+options(scipen = 999)
+```
+
+```{r CargueDatos, eval=FALSE, include=FALSE}
+con <- DBI::dbConnect(RPostgres::Postgres(),
+                      host = '10.0.22.11',
+                      port = '5432',
+                      dbname = 'GRMDW',
+                      user = keyring::key_list("DWGM")[1,2],
+                      password = keyring::key_get("DWGM", keyring::key_list("DWGM")[1,2]))
+
+# Se obtiene las fechas actuales de los datos procesados
+data <- odbc::dbGetQuery(con, 'SELECT "ActStart", "SiteId", "AssetNum", "Parent", "WoNum", 
+                                "DescriptionOt", "Status", "WoClass", "WorkType",  "LectOdom"
+                                FROM "public"."FactWorkOrder"
+                                WHERE "WoClass" = \'ACTIVIDAD\' 
+                                AND "Status" IN (\'TERMINADO\', \'COMP\') 
+                                AND "AssetNum" = \'KYO420\'
+                                ORDER BY "ActStart" DESC')
+
+DBI::dbDisconnect(con)
+```
+
+# Consumo Energético
+
+Con los eventos **20 =\> Inicio del proceso de carga** y **21 =\> Finalización del proceso de carga** se realiza el procesamiento de la información para obtener los porcentajes de carga del vehículo y el tiempo transcurrido en la operación de carga.
+
+<p style="background-color: #F5F5F5">
+
+**Tabla resumen de datos de los eventos de carga**.
+
+</p>
+
+```{r message=FALSE, warning=FALSE, paged.print=TRUE}
+data
+```
