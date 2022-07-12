@@ -17,10 +17,17 @@ options(scipen = 999)
 # Para que el scrip funcione debe primero setear en la computadora lo siguiente:
 # @keyring::key_set("DWGM", "TuUsuraio", "TuContraseña")
 
-placa <- "KYO810"
+placa <- c("KYO479", "KYO395")
+desde <- "2022-04-01"
+hasta <- Sys.Date()
 
-rmarkdown::render(
-  input = "HV Activo.Rmd",  
-  output_file = stringr::str_glue("02 Outputs/{placa}_Report_{format(Sys.Date(), '%Y%m%d')}.html"),
-  params = list(placa = placa, desde = "2022-04-01", hasta = "2022-07-08"))
-
+for (i in placa) {
+  
+  placa <- i
+  
+  rmarkdown::render(
+    input = "HV Activo.Rmd",  
+    output_file = stringr::str_glue("02 Outputs/{placa}_Report_{format(Sys.Date(), '%Y%m%d')}.html"),
+    params = list(placa = placa, desde = desde, hasta = hasta, tipo = tipoot))
+  
+}
