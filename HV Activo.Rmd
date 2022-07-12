@@ -9,7 +9,7 @@ output:
   pdf_document:
     toc: no
 params:
-  placa: KYO810
+  placa: 'KYO810'
   desde: '2022-04-01'
   hasta: '2022-07-08'
 pagetitle: Hoja de Vida del Activo
@@ -94,7 +94,6 @@ ordenes_sql <- glue_sql('SELECT DATE("ActStart") AS "Fecha", "SiteId" as "Empres
 ordenes <- odbc::dbGetQuery(con, ordenes_sql) %>% 
   mutate_at(vars("Estado", "Clase"), .funs = str_to_title) %>% 
   mutate(Tipo = as.factor(Tipo))
-  
 
 DBI::dbDisconnect(con)
 ```
@@ -128,6 +127,7 @@ ordenes %>%
     rownames = FALSE,
     extensions = 'Buttons',
     options = list(pageLength = 15,
+                   lengthMenu = list(c(15, 25, -1), c("15", "25", "All")),
                    dom = 'Bltrpi',
                    buttons = c('csv'),
                    searchHighlight = TRUE,
